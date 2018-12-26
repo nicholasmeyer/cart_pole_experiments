@@ -9,5 +9,5 @@ with some policy based methods discussed in the lectures.
 ```
 Usage:
 
-    python cart_pole_experiments.py
+    python cart_pole.py
 ```
