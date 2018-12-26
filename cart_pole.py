@@ -1,8 +1,6 @@
 import gym
 from collections import deque
 import numpy as np
-import math
-import sys
 
 import matplotlib.pyplot as plt
 
@@ -12,6 +10,29 @@ np.random.seed(0)
 
 print('observation space:', env.observation_space)
 print('action space:', env.action_space)
+
+
+def plot(scores, method, fig_name):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.grid()
+    ax.plot(np.arange(len(scores)), scores)
+    ax.set(xlabel="Episode #", ylabel="'Score", title=str(method))
+    fig.savefig(fig_name + '.pdf')
+
+
+def play(policy):
+    state = env.reset()
+    img = plt.imshow(env.render(mode='rgb_array'))
+    env.render()
+    while True:
+        action = policy.act(state)
+        img.set_data(env.render(mode='rgb_array'))
+        plt.axis('off')
+        state, reward, done, _ = env.step(action)
+        if done:
+            break
+    env.close()
 
 
 class Policy:
@@ -30,7 +51,8 @@ class Policy:
         return action
 
 
-def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2):
+def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2,
+                  noise_scale_min=1e-3, test=True, anneal=False):
     """Implementation of hill climbing with adaptive noise scaling.
 
     Params
@@ -39,11 +61,10 @@ def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=10
         max_t (int): maximum number of timesteps per episode
         gamma (float): discount rate
         print_every (int): how often to print average score (over last 100 episodes)
-        noise_scale (float): standard deviation of additive noise
-
-    Returns
-    =======
-        scores (list): total rewards achieved for each episode
+        noise_scale (float): standard deviation for gaussian noise
+        noise_scale_min (float): minimum standard deviation for gaussian noise when annealing
+        test (bool): play the game using the trained agent
+        anneal (bool): if True anneal noise linearly over all episodes, otherwise use adaptive noise scaling
     """
     scores_deque = deque(maxlen=100)
     scores = []
@@ -67,10 +88,16 @@ def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=10
         if R >= best_R:  # found better weights
             best_R = R
             best_w = policy.w
-            noise_scale = max(1e-3, noise_scale / 2)
+            if anneal:
+                noise_scale -= (noise_scale - noise_scale_min) / n_episodes
+                # anneal noise_scale linearly over all episodes
+            else:
+                noise_scale = max(1e-3, noise_scale / 2)
+                # adaptively adjust noise scale
             policy.w += noise_scale * np.random.rand(*policy.w.shape)
         else:  # did not find better weights
-            noise_scale = min(2, noise_scale * 2)
+            if not anneal:
+                noise_scale = min(2, noise_scale * 2)
             policy.w = best_w + noise_scale * np.random.rand(*policy.w.shape)
 
         if i_episode % print_every == 0:
@@ -81,11 +108,16 @@ def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=10
                 i_episode, np.mean(scores_deque)))
             policy.w = best_w
             break
+    if anneal:
+        plot(scores, 'hill climbing with simulated annealing', 'hill_climb_anneal')
+    else:
+        plot(scores, 'hill climbing with adaptive noise scaling', 'hill_climb_adaptive')
+    if test:
+        play(policy)
 
-    return scores
 
-
-def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2, neighbour_size=5):
+def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2,
+                    noise_scale_min=1e-3, neighbour_size=5, test=True, anneal=False):
     """Implementation of steepest ascent adaptive noise scaling.
 
     Params
@@ -94,7 +126,10 @@ def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=
         max_t (int): maximum number of timesteps per episode
         gamma (float): discount rate
         print_every (int): how often to print average score (over last 100 episodes)
-        noise_scale (float): standard deviation of additive noise
+        noise_scale (float): standard deviation for gaussian noise
+        noise_scale_min (float): minimum standard deviation for gaussian noise when annealing
+        test (bool): play the game using the trained agent
+        anneal (bool): if True anneal noise linearly over all episodes, otherwise use adaptive noise scaling
     """
     scores_deque = deque(maxlen=100)
     scores = []
@@ -129,11 +164,16 @@ def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=
         if R >= best_R:  # found better weights
             best_R = R
             best_w = policy.w
-            noise_scale = max(1e-3, noise_scale / 2)
+            if anneal:
+                noise_scale -= (noise_scale - noise_scale_min) / n_episodes
+                # anneal noise_scale linearly over all episodes
+            else:
+                noise_scale = max(1e-3, noise_scale / 2)
             possible_w = [policy.w + noise_scale *
                           np.random.rand(*policy.w.shape) for _ in range(neighbour_size + 1)]
         else:  # did not find better weights
-            noise_scale = min(2, noise_scale * 2)
+            if not anneal:
+                noise_scale = min(2, noise_scale * 2)
             possible_w = [best_w + noise_scale *
                           np.random.rand(*policy.w.shape) for _ in range(neighbour_size + 1)]
 
@@ -145,25 +185,14 @@ def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=
                 i_episode, np.mean(scores_deque)))
             policy.w = best_w
             break
-
-    return scores
-
-
-def display(policy):
-    state = env.reset()
-    img = plt.imshow(env.render(mode='rgb_array'))
-    env.render()
-    while True:
-        action = policy.act(state)
-        img.set_data(env.render(mode='rgb_array'))
-        plt.axis('off')
-        state, reward, done, _ = env.step(action)
-        if done:
-            break
-    env.close()
+    if anneal:
+        plot(scores, 'steepest ascent with simulated annealing', 'steepest_ascent_anneal')
+    else:
+        plot(scores, 'steepest ascent with adaptive noise scaling', 'steepest_ascent_adaptive')
+    if test:
+        play(policy)
 
 
 if __name__ == "__main__":
     policy = Policy()
-    scores = steepest_ascent(policy)
-    display(policy)
+    hill_climbing(policy, anneal=True)
