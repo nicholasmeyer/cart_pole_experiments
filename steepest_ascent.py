@@ -2,6 +2,8 @@ from collections import deque
 
 from utils import *
 
+env = create_env()
+
 
 def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2, neighbour_size=5):
     """Implementation of steepest ascent adaptive noise scaling.
@@ -64,7 +66,7 @@ def steepest_ascent(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=
             policy.w = best_w
             break
     plot(scores, 'steepest ascent with adaptive noise scaling', 'steepest_ascent')
-    play(policy)
+    play(policy, env)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@ from collections import deque
 
 from utils import *
 
+env = create_env()
+
 
 def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=100, noise_scale=1e-2):
     """Implementation of hill climbing with adaptive noise scaling.
@@ -52,7 +54,7 @@ def hill_climbing(policy, n_episodes=1000, max_t=1000, gamma=1.0, print_every=10
             policy.w = best_w
             break
     plot(scores, 'hill climbing with adaptive noise scaling', 'hill_climbing')
-    play(policy)
+    play(policy, env)
 
 
 if __name__ == "__main__":

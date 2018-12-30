@@ -2,12 +2,15 @@ import gym
 import numpy as np
 import matplotlib.pyplot as plt
 
-env = gym.make('CartPole-v0')
-env.seed(0)
-np.random.seed(0)
 
-print('observation space:', env.observation_space)
-print('action space:', env.action_space)
+def create_env():
+    env = gym.make('CartPole-v0')
+    env.seed(0)
+    np.random.seed(0)
+
+    print('observation space:', env.observation_space)
+    print('action space:', env.action_space)
+    return env
 
 
 def plot(scores, method, fig_name):
@@ -15,11 +18,11 @@ def plot(scores, method, fig_name):
     ax = fig.add_subplot(111)
     ax.grid()
     ax.plot(np.arange(len(scores)), scores)
-    ax.set(xlabel="Episode #", ylabel="'Score", title=str(method))
+    ax.set(xlabel="Episode #", ylabel="Score", title=str(method))
     fig.savefig(fig_name + '.pdf')
 
 
-def play(policy):
+def play(policy, env):
     state = env.reset()
     img = plt.imshow(env.render(mode='rgb_array'))
     env.render()

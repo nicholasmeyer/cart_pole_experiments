@@ -2,8 +2,10 @@ from collections import deque
 
 from utils import *
 
+env = create_env()
 
-def simulated_annealing(policy, n_episodes=2000, max_t=1000, gamma=1.0, print_every=100, temp=1000, temp_final=1):
+
+def simulated_annealing(policy, n_episodes=2000, max_t=1000, gamma=1.0, print_every=100, T=1000, T_final=1):
     """Implementation of hill climbing with simulated annealing.
 
     Params
@@ -38,7 +40,7 @@ def simulated_annealing(policy, n_episodes=2000, max_t=1000, gamma=1.0, print_ev
             current_w = policy.w
             policy.w += np.random.rand(*policy.w.shape)
         else:  # did not find better weights
-            prob = np.exp((R - current_R) / temp)
+            prob = np.exp((R - current_R) / T)
             explore = np.random.choice([0, 1], p=[1-prob, prob])
             if explore:
                 current_R = R
@@ -46,8 +48,8 @@ def simulated_annealing(policy, n_episodes=2000, max_t=1000, gamma=1.0, print_ev
                 policy.w += np.random.rand(*policy.w.shape)
             else:
                 policy.w = current_w + np.random.rand(*policy.w.shape)
-        # anneal temperature
-        temp -= (temp - temp_final) / n_episodes
+        # anneal Terature
+        T -= (T - T_final) / n_episodes
         if i_episode % print_every == 0:
             print('Episode {}\tAverage Score: {:.2f}'.format(
                 i_episode, np.mean(scores_deque)))
@@ -57,7 +59,7 @@ def simulated_annealing(policy, n_episodes=2000, max_t=1000, gamma=1.0, print_ev
             policy.w = current_w
             break
     plot(scores, 'simulated annealing', 'simulated_annealing')
-    play(policy)
+    play(policy, env)
 
 
 if __name__ == "__main__":
